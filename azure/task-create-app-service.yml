@@ -1,0 +1,80 @@
+parameters:
+   resource_group: ""
+   app_service_plan: ""
+   app_service: ""
+   region: ""
+   acr_registry: ""
+   acr_image: ""
+   sku: ""
+   subscription: ""
+steps:
+   - task: AzureCLI@2
+     displayName: "Infrastructure: Provision (${{ parameters.app }})"
+     inputs:
+        azureSubscription: ${{ parameters.subscription }}
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+           #!/bin/bash
+           # Formatting
+           reset="\e[0m"
+           yellow="\e[33m"
+           red="\e[31m"
+           green="\e[32m"
+           cyan="\e[36m"
+
+           # Reading in parameters
+           resourceGroup='${{ parameters.resource_group }}'
+           appServicePlan='${{ parameters.app_service_plan }}'
+           appService='${{ parameters.app_service }}'
+           region='${{ parameters.region }}'
+           acrRegistry='${{ parameters.acr_registry }}'
+           acrImage='${{ parameters.acr_image }}'
+           sku='${{ parameters.sku }}' # F1 for Dev, B1 for QA, P1V2 for Prod
+
+           echo -e "$yellow ~~~$cyan AZURE INFRASTRUCTURE PROVISIONING$yellow ~~~$reset"
+           echo "Resource Group: $resourceGroup"
+           echo "App Service Plan: $appServicePlan"
+           echo "App Service: $appService"
+           echo "Region: $region"
+           echo "ACR Repo: $acrRegistry"
+           echo "ACR Image: $acrImage"
+           echo "SKU: $sku"
+
+           # Checking to see what's there
+           echo -e "$yellow ~~~$reset Checking Infrastructure..."
+           resourceGroupCheck=$(az group exists -n $resourceGroup)
+           appServicePlanCheck=$(az appservice plan list --query "[?name=='$appServicePlan']")
+           appServiceCheck=$(az webapp show --name $appService --resource-group $resourceGroup)
+
+           # Creating Resource Group
+           echo "Resource Group Check: $resourceGroupCheck"
+           if [[ $resourceGroupCheck = "false" ]]; then
+              echo -e "$yellow ~~~$cyan Resource Group$reset ($resourceGroup)$red Not Found $reset, Creating..."
+              az group create -l $region -n $resourceGroup
+              echo -e "$green [ $resourceGroup Created in $region Region ] $reset"
+           else
+              echo -e "$yellow ~~~$reset Resource Group ($resourceGroup) Exists, skipping..."
+           fi;
+
+           # Creating App Service Plan
+           echo "App Service Plan Check: $appServicePlanCheck"
+           if [[ $appServicePlanCheck = "[]" ]]; then
+              echo -e "$yellow ~~~$reset App Service Plan ($appServicePlan)$red Not Found $reset, Creating..."
+              az appservice plan create --name $appServicePlan --sku $sku --resource-group $resourceGroup --is-linux
+              echo -e "$green [ $appServicePlan Created in $resourceGroup Resouce Group with $sku SKU ] $reset"
+           else
+              echo -e "$yellow ~~~$reset App Service Plan ($appServicePlan) Exists..."
+           fi;
+
+           # Creating App Service
+           echo "App Service Check: $appServiceCheck"
+           if [[ -z $appServiceCheck ]]; then
+              echo -e "$yellow ~~~$cyan App Service$reset ($appService)$red Not Found $reset, Creating..."
+              az webapp create --name $appService --plan $appServicePlan --resource-group $resourceGroup -i $acrRegistry/$acrImage
+              echo "az webapp create --name $appService --plan $appServicePlan --resource-group $resourceGroup -i $acrRegistry/$acrImage"
+              az webapp deployment container config --enable-cd true --name $appService --resource-group $resourceGroup
+              echo -e "$green [ $appService Created in $appServicePlan App Service Plan] $reset"
+           else
+              echo -e "$yellow ~~~$reset App Service ($appService) Exists, skipping..."
+           fi;

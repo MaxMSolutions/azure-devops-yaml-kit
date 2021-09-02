@@ -1,0 +1,27 @@
+parameters:
+   file_path: ""
+   key: ""
+   value: ""
+steps:
+   - powershell: |
+      $file_path="${{ parameters.file_path }}"
+      $key="${{ parameters.key }}"
+      $value="${{ parameters.value }}"
+
+      function SetValue($object, $key, $Value)
+      {
+         $p1,$p2 = $key.Split(".",2)
+         if($p2) { $object | ?{$Null -ne $_.$p1} | %{SetValue -object $_.$p1 -key $p2 -Value $Value} }
+         else { $object | ?{$Null -ne $_.$p1} | %{$_.$p1 = $Value} }
+      }
+
+      $json = Get-Content $file_path | ConvertFrom-Json 
+
+      SetValue $json $key $value
+
+      Write-Host "-------- FILE UPDATED --------"
+      write-host "$json"
+      Write-Host "------------------------------"
+
+      $json | ConvertTo-Json | Out-File "$file_path"
+     displayName: "Utility: Update ${{ parameters.key }} to ${{ parameters.value }}"

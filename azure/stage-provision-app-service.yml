@@ -1,0 +1,36 @@
+## Create app service
+parameters:
+   env: ""
+   app: ""
+   version: ""
+   docker_registry: ""
+   docker_registry_uri: ""
+   docker_repository: ""
+   docker_build_context: "."
+   dockerfile_path: "**/Dockerfile"
+   resource_group: ""
+   app_service_plan: ""
+   app_service: ""
+   region: "useast"
+   sku: ""
+   subscription: ""
+   depends_on: ""
+   condition: true
+stages:
+   - stage: deploy_docker_app_service_${{ parameters.app }}_${{ parameters.env }}
+     displayName: "Deploy - ${{ parameters.env }} - ${{ parameters.app }}"
+     dependsOn: "${{ parameters.depends_on }}"
+     condition: "${{ parameters.condition }}"
+     variables: 
+        - ${{ each group in parameters.variable_groups }}:
+            - group: ${{ group }}
+     jobs:
+        - deployment: deploy_${{ parameters.app }}_${{ parameters.env }}
+          displayName: "Deploy ${{ parameters.app }} - ${{ parameters.env }}"
+          environment: "${{ parameters.env }}"
+          pool:
+             vmImage: "ubuntu-latest"
+          strategy:
+             runOnce:
+                deploy:
+                   steps:

@@ -1,0 +1,33 @@
+# NOTE: You need to pass in a variable group containing the expo username & password
+parameters:
+   env: ""
+   app: ""
+   variable_groups: []
+   build_command: ""
+   depends_on: ""
+   condition: ""
+stages:
+   - stage: deploy_expo_${{ parameters.app }}_${{ parameters.env }}
+     displayName: "Deploy - ${{ parameters.env }} - ${{ parameters.app }}"
+     dependsOn: "${{ parameters.depends_on }}"
+     condition: "${{ parameters.condition }}"
+     variables: 
+        - ${{ each group in parameters.variable_groups }}:
+            - group: ${{ group }}
+     jobs:
+        - deployment: deploy_${{ parameters.app }}_${{ parameters.env }}
+          displayName: "Deploy ${{ parameters.app }} - ${{ parameters.env }}"
+          environment: "${{ parameters.env }}"
+          pool:
+             vmImage: "ubuntu-latest"
+          strategy:
+             runOnce:
+                deploy:
+                   steps:
+                      - template: "../../utility/azure-devops/task-cancel-previous-releases.yml"
+                      - template: "../../utility/expo/task-deploy-expo-app.yml"
+                        parameters:
+                           env: ${{ parameters.env }}
+                           app: ${{ parameters.app }}
+                           version: ${{ parameters.version }}
+                           build_command: ${{ parameters.build_command }}

@@ -1,0 +1,19 @@
+parameters:
+   version: "1.0"
+   feed: ""
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '10.x'
+  displayName: 'Prep: Install Node.js'
+- template: "../common/task-update-json-file.yml"
+  parameters:
+    file_path: "$(Build.SourcesDirectory)/package.json"
+    key: "version"
+    value: "${{ parameters.version }}.$(Build.BuildId)"
+- task: Npm@1
+  inputs:
+    command: publish
+    publishRegistry: useFeed
+    publishFeed: ${{ parameters.feed }}
+  displayName: 'Build: Publish NPM Package'

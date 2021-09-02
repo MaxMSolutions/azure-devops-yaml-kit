@@ -1,0 +1,14 @@
+steps:
+   - powershell: |
+      $header = @{ Authorization = "Bearer $env:System_AccessToken" }
+      $buildsUrl = "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_apis/builds/builds"
+      $builds = Invoke-RestMethod -Uri $buildsUrl -Method Get -Header $header
+      $buildsToStop = $builds.value.Where({ ($.status -eq 'inProgress') -and ($_.definition.name -eq '$(Build.DefinitionName)') -and ($_.id -ne $(Build.BuildId)) })
+      ForEach($build in $buildsToStop)
+      {
+         $build.status = "Cancelling"
+         $body = $build | ConvertTo-Json -Depth 10
+         $urlToCancel = "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_apis/build/builds/$(builds.id)"
+         Invoke-RestMethod -Uri $urlToCancel -Method Patch -ContentType application/json -Body $body -Header $header
+      }
+     displayName: "Setup: Cancel Previous Pipelines"

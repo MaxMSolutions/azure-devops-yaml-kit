@@ -1,0 +1,21 @@
+parameters:
+   env: ""
+   app: ""
+   version: ""
+   build_command: ""
+steps:
+   - checkout: self
+   - script: |
+      npm install
+      echo "------------- Installing Expo CLI -------------"
+      sudo npm install -g expo-cli
+      echo "------------- Signing into the Expo CLI -------------"
+      expo signin -u $(Username) -p "$(Password)"
+      echo "------------- Running Expo Build -------------"
+      npm run ${{ parameters.build_command }}
+      echo "******************************************************"
+      echo "****** COMPLETE: Build started for ${{ parameters.app }} (${{ parameters.env }}), ETA 15 minutes *******"
+      echo "******************************************************"
+     displayName: "Release: Run Expo Build"
+
+

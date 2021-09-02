@@ -1,0 +1,26 @@
+parameters:
+   react_app_path: "./"
+   build_path: "dist"
+   run_command: "build"
+   # (Optional) Must end in /
+   copy_to: ""
+   condition: false
+steps:
+   - script: |
+        cd ${{ parameters.react_app_path }}
+        pwd
+        npm install
+        npm run ${{ parameters.run_command }}
+     displayName: "Build: Build React Front-End"
+     condition: ${{ parameters.condition }}
+   - script: |
+        if ! [[ -z "${{ parameters.copy_to}}" ]]; then
+            cp -r ${{ parameters.build_path }}/. ${{ parameters.copy_to }}
+        fi;
+     displayName: "Build: Copy React Front End to ${{ parameters.copy_to }}"
+     condition: ${{ parameters.condition }}
+   - task: PublishPipelineArtifact@1
+     displayName: "Build: Publish React Artifacts"
+     inputs:
+        artifact: $(Build.BuildId)
+        targetPath: ${{ parameters.build_path }}

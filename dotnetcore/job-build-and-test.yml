@@ -1,0 +1,45 @@
+parameters:
+   env: ""
+   app: ""
+   version: ""
+   variable_groups: []
+   nuget_config: ""
+   project_path: "**/*.csproj"
+   tests_path: "**/*Test*.csproj"
+   depends_on: ""
+   condition: true
+stages:
+   - stage: publish_docker_image_${{ parameters.app }}_${{ parameters.env }}
+     displayName: "Deploy - ${{ parameters.app }} ${{ parameters.env }}"
+     dependsOn: "${{ parameters.depends_on }}"
+     condition: "${{ parameters.condition }}"
+     variables: 
+        - ${{ each group in parameters.variable_groups }}:
+            - group: ${{ group }}
+     jobs:
+       - template: "../utility/azure-devops/task-cancel-previous-releases.yml"
+       - checkout: self
+       - task: DotNetCoreCLI@2
+         displayName: "Build: Restore Packages"
+         condition: ne('${{ parameters.nuget_config }}', '')
+         inputs:
+            command: "restore"
+            projects: ${{ parameters.project_path }}
+            feedsToUse: "config"
+            nugetConfigPath: ${{ parameters.nuget_config }}
+            arguments: --ignore-failed-sources
+       - task: DotNetCoreCLI@2
+         displayName: "Test: Run all unit tests"
+         inputs:
+            command: test
+            projects: ${{ parameters.tests_path }}
+       - task: DotNetCoreCLI@2
+         displayName: "Build: ${{ parameters.project_path }}"
+         condition: ne('${{ parameters.project_path }}', '')
+         inputs:
+            command: "build"
+            projects: ${{ parameters.project_path }}
+            feedsToUse: "config"
+            nugetConfigPath: ${{ parameters.nuget_config }}
+            arguments: --ignore-failed-sources
+

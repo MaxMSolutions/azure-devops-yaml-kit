@@ -1,0 +1,35 @@
+parameters:
+   app: ""
+   version: ""
+   ado_project: ""
+   projects: "**/**.csproj"
+   feed: "Enterprise"
+stages:
+   - stage: publish_nuget_${{ parameters.app }}
+     displayName: "Build & Publish Nuget Packages - ${{ parameters.app }}"
+     jobs:
+        - job: publish_nuget
+          displayName: "Test, Pack, & Publish Nuget"
+          pool:
+             vmImage: "ubuntu-latest"
+          steps:
+             - task: NuGetAuthenticate@0
+             - task: DotNetCoreCLI@2
+               displayName: "Nuget: Run dotnet build"
+               inputs:
+                  command: "build"
+                  buildProperties: Version=${{ parameters.version }}.$(Build.BuildId)
+             - task: DotNetCoreCLI@2
+               displayName: "Nuget: Run dotnet pack (Projects: ${{ parameters.projects }})"
+               inputs:
+                  command: "pack"
+                  packagesToPack: ${{ parameters.projects }}
+                  versioningScheme: "off"
+                  buildProperties: Version=${{ parameters.version }}.$(Build.BuildId)
+             - task: DotNetCoreCLI@2
+               displayName: "Nuget: Run internal nuget push (Feed: ${{ parameters.feed }})"
+               inputs:
+                  command: "push"
+                  packagesToPush: "$(Build.ArtifactStagingDirectory)/*.nupkg"
+                  nuGetFeedType: "internal"
+                  publishVstsFeed: ${{ parameters.ado_project }}/${{ parameters.feed }}

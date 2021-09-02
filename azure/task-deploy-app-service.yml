@@ -1,0 +1,46 @@
+parameters:
+   env: ""
+   app: ""
+   version: ""
+   image_tag: ""
+   docker_registry: ""
+   docker_registry_uri: ""
+   docker_repository: ""
+   docker_build_context: "."
+   docker_build_args: ""
+   dockerfile_path: "**/Dockerfile"
+   resource_group: ""
+   app_service_plan: ""
+   app_service: ""
+   region: "useast"
+   sku: ""
+   subscription: ""
+   provision_app: false
+steps:
+   - checkout: self
+   - task: DockerInstaller@0
+     displayName: "Release: Docker Install"
+   - script: |
+      cd $(Build.SourcesDirectory)
+      docker build -f $(Build.SourcesDirectory)/${{ parameters.dockerfile_path }} --build-arg PAT=** -t ${{ parameters.docker_registry_uri }}/${{ parameters.docker_repository }}:${{ parameters.image_tag }} -t ${{ parameters.docker_registry_uri }}/${{ parameters.docker_repository }}:${{ parameters.version }}.$(Build.BuildId) .
+     displayName: "Release: Build Docker Image"
+   - task: Docker@2
+     displayName: "Release: Push Docker Image to ACR"
+     inputs:
+      containerRegistry: ${{ parameters.docker_registry }}
+      repository: ${{ parameters.docker_repository }}
+      command: push
+      arguments: ${{ parameters.docker_build_args }}
+      tags: |
+         ${{ parameters.version }}.$(Build.BuildId)
+         ${{ parameters.image_tag }}
+   - task: AzureCLI@2
+     displayName: 'Release: Restart App Service'
+     inputs:
+      azureSubscription: ${{ parameters.subscription }}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+         sleep 20
+         az webapp restart --name ${{ parameters.app_service }} --resource-group ${{ parameters.resource_group }}
+

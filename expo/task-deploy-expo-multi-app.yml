@@ -1,0 +1,42 @@
+parameters:
+   build_commands: ""
+steps:
+   - checkout: self
+   - script: |
+      CYAN='\033[0;36m'
+      YELLOW='\033[1;33m'
+      GREEN='\033[0;32m'
+      GREY='\033[1;30m'
+      NC='\033[0m'
+
+      echo ""
+      echo ""
+      echo -e "$CYAN ------------- Running NPM Install ------------- $GREY"
+      npm install
+
+      echo "------------- Installing Expo CLI -------------"
+      sudo npm install -g expo-cli
+
+      echo ""
+      echo "------------- Signing into the Expo CLI -------------"
+      expo signin -u $(Username) -p "$(Password)"
+
+      echo ""  
+      echo -e "$CYAN ------------- Parsing Config Commands ------------- $GREY"
+      IN="${{ parameters.build_commands }}"
+      builds=$(echo $IN | tr "," "\n")
+
+      echo ""
+      echo -e "$CYAN ------------- Running Expo Multi Build ------------- $NC"
+      for b in $builds
+      do
+         echo -e "$YELLOW --- Deploying with [$b]: $GREY"
+         npm run $b
+      done
+
+      echo "******************************************************"
+      echo "****** COMPLETE: Build started for ${{ parameters.app }} (${{ parameters.env }}), ETA 15 minutes *******"
+      echo "******************************************************"
+     displayName: "Release: Run Expo Build Multi"
+
+

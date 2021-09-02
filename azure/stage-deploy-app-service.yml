@@ -1,0 +1,58 @@
+parameters:
+   env: ""
+   app: ""
+   version: ""
+   image_tag: ""
+   docker_registry: ""
+   docker_registry_uri: ""
+   docker_repository: ""
+   docker_build_context: "."
+   docker_build_args: ""
+   dockerfile_path: "**/Dockerfile"
+   resource_group: ""
+   app_service_plan: ""
+   app_service: ""
+   region: "useast"
+   sku: ""
+   subscription: ""
+   provision_app: false
+   depends_on: ""
+   condition: true
+stages:
+   - stage: deploy_docker_app_service_${{ parameters.app }}_${{ parameters.env }}
+     displayName: "Deploy - ${{ parameters.env }} - ${{ parameters.app }}"
+     dependsOn: "${{ parameters.depends_on }}"
+     condition: "${{ parameters.condition }}"
+     variables: 
+        - ${{ each group in parameters.variable_groups }}:
+            - group: ${{ group }}
+     jobs:
+        - deployment: deploy_${{ parameters.app }}_${{ parameters.env }}
+          displayName: "Deploy ${{ parameters.app }} - ${{ parameters.env }}"
+          environment: "${{ parameters.env }}"
+          pool:
+             vmImage: "ubuntu-latest"
+          strategy:
+             runOnce:
+                deploy:
+                   steps:
+                      - template: "../../utility/azure-devops/task-cancel-previous-releases.yml"
+                      - template: "../../utility/azure/task-deploy-app-service.yml"
+                        parameters:
+                           env: ${{ parameters.env }}
+                           app: ${{ parameters.app }}
+                           version: ${{ parameters.version }}
+                           image_tag: ${{ parameters.image_tag }}
+                           docker_registry: ${{ parameters.docker_registry }}
+                           docker_registry_uri: ${{ parameters.docker_registry_uri }}
+                           docker_repository: ${{ parameters.docker_repository }}
+                           docker_build_context: ${{ parameters.docker_build_context }}
+                           dockerfile_path: ${{ parameters.dockerfile_path }}
+                           docker_build_args: ${{ parameters.docker_build_args }}
+                           resource_group: ${{ parameters.resource_group }}
+                           app_service_plan: ${{ parameters.app_service_plan }}
+                           app_service: ${{ parameters.app_service }}
+                           region: ${{ parameters.region }}
+                           sku: ${{ parameters.sku }}
+                           subscription: ${{ parameters.subscription }}
+                           provision_app: ${{ parameters.provision_app }}
